@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+cd "${REPO_ROOT}"
+
 PROJECT="${PROJECT:-mittari}"
 APP_NAME="${APP_NAME:-mittari}"
 ORG="${ORG:-luomus}"
@@ -20,17 +24,23 @@ require_cmd gh
 
 IMAGE_TAG="${IMAGE_TAG:-}"
 if [ -z "${IMAGE_TAG}" ]; then
+  if short_sha="$(git rev-parse --short=7 HEAD 2>/dev/null)"; then
+    IMAGE_TAG="main-${short_sha}"
+    echo "Using image tag from git HEAD: ${IMAGE_TAG}"
+  fi
+fi
+if [ -z "${IMAGE_TAG}" ]; then
   IMAGE_TAG="$(
     gh api "/orgs/${ORG}/packages/container/${PACKAGE}/versions" --paginate \
-      --jq '[.[] | {created_at, tags: (.metadata.container.tags // [])}] |
-            sort_by(.created_at) | reverse | .[] | .tags[] |
-            select(test("^main-[0-9a-f]{7,}$"))' \
-      | head -n 1
+      --jq '[.[] | select([.metadata.container.tags[]? | test("^main-[0-9a-f]{7,}$")] | any)] | if length == 0 then empty else (max_by(.updated_at // .created_at) | (.metadata.container.tags // []) | map(select(test("^main-[0-9a-f]{7,}$"))) | first // empty) end'
   )"
+  if [ -n "${IMAGE_TAG}" ] && [ "${IMAGE_TAG}" != "null" ]; then
+    echo "Using image tag from GHCR (no git repo): ${IMAGE_TAG}"
+  fi
 fi
 
-if [ -z "${IMAGE_TAG}" ]; then
-  echo "Could not find a deployable GHCR tag. Set IMAGE_TAG manually." >&2
+if [ -z "${IMAGE_TAG}" ] || [ "${IMAGE_TAG}" = "null" ]; then
+  echo "Could not determine image tag. Run from the mittari clone on the commit you pushed, or set IMAGE_TAG." >&2
   exit 1
 fi
 
@@ -41,7 +51,7 @@ echo "Deploying image: ${IMAGE}"
 
 if [ "${SYNC_ENV_BEFORE_DEPLOY}" = "1" ]; then
   echo "Syncing environment values from .env to OpenShift..."
-  PROJECT="${PROJECT}" APP_NAME="${APP_NAME}" ./scripts/sync-openshift-env.sh
+  PROJECT="${PROJECT}" APP_NAME="${APP_NAME}" "${SCRIPT_DIR}/sync-openshift-env.sh"
 fi
 
 oc project "${PROJECT}" >/dev/null

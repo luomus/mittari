@@ -100,10 +100,12 @@ Open the HTTPS route URL in your browser.
 1) Push code changes to `main`:
 
 ```bash
-git push origin main
+git push
 ```
 
-2) Wait for GitHub Actions workflow `Build and Push Docker Image` to finish successfully.
+2) Wait for GitHub Actions workflow to finish successfully.
+
+See: https://github.com/luomus/mittari/actions
 
 3) Deploy newest image to OpenShift (this also syncs `.env` by default):
 
