@@ -29,6 +29,7 @@ declare -a config_args
 secret_keys=(
   "LAJI_API_ACCESS_TOKEN"
   "SECRET_KEY"
+  "FLUSH_SECRET_KEY"
 )
 
 config_keys=(

@@ -6,7 +6,6 @@ strings alone.
 """
 
 
-
 from __future__ import annotations
 
 from urllib.parse import quote, urlencode
@@ -72,6 +71,7 @@ def get_taxon_display_label(taxon_id: str) -> str | None:
     if sci:
         return sci
     return None
+
 
 
 def _fetch_aggregate(*, taxon_id: str, year: int | None) -> dict:
