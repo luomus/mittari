@@ -2,16 +2,14 @@
 
 Observation statistics demo service.
 
+Requirements:
 
-## Setup
+- **Local:** [Docker](https://docs.docker.com/get-docker/)
+- **Deploy to OpenShift:** [OpenShift CLI](https://docs.openshift.com/container-platform/latest/cli_reference/openshift_cli/getting-started-cli.html) (`oc`) and [GitHub CLI](https://cli.github.com/) (`gh`; the deploy script picks the newest `main-<sha>` image tag from GHCR)
 
-Create a `.env` file in the project root (or set environment variables). Use `.env.example` as a template.
+## Set up locally
 
-Required variables:
-
-- LAJI_API_ACCESS_TOKEN: API access token for fetching data from api.laji.fi
-- SECRET_KEY (required): Flask secret key used to sign sessions
-
+Create a `.env` file in the project root. Copy `.env.example` and fill in values.
 
 ### Run locally
 
@@ -19,27 +17,37 @@ Required variables:
 docker compose up --build
 ```
 
-Then open:
+Then open: http://localhost:8080
 
-```text
-http://localhost:8080
+### Run in production on OpenShift
+
+1) Push to `main`. GitHub Actions builds and pushes the image to GHCR.
+
+2) Wait for the workflow to finish: https://github.com/luomus/mittari/actions
+
+3) Log in to OpenShift (command from the Rahti web UI) and select the project:
+
+```bash
+oc project mittari
 ```
 
-### Run in production (OpenShift)
+4) Deploy the newest image (this also syncs `.env` to the cluster by default):
 
-Canonical repository: [github.com/luomus/mittari](https://github.com/luomus/mittari).
-
-The GitHub Actions workflow publishes images to:
-
-```text
-ghcr.io/luomus/mittari
+```bash
+./scripts/deploy-openshift.sh
 ```
 
-Important: pushing to `main` automatically builds and pushes a new image to GHCR, but it does **not** automatically roll out OpenShift deployment. See deployment instructions below.
+5) Verify rollout and running image:
 
-**Tools:** `oc` is required. `./scripts/deploy-openshift.sh` also needs the [GitHub CLI](https://cli.github.com/) (`gh`) to resolve the newest `main-<sha>` tag from GHCR. For a **private** package, run `gh auth login` and authorize **`read:packages`**. If you prefer not to use `gh`, set `IMAGE_TAG` explicitly (see below).
+```bash
+oc rollout status deployment/mittari
+oc get pods
+oc get deployment mittari -o jsonpath='{.spec.template.spec.containers[0].image}{"\n"}'
+```
 
-#### One-time setup
+The app is served at: https://mittari.2.rahtiapp.fi
+
+## First-time setup
 
 1) Select the OpenShift project:
 
@@ -47,9 +55,8 @@ Important: pushing to `main` automatically builds and pushes a new image to GHCR
 oc project mittari
 ```
 
-2) Create GHCR pull secret (required if the image is private):
+2) Create a GHCR pull secret (needed if the image is private):
 
-Use a GitHub personal access token with **`read:packages`** (and org access as required).
 ```bash
 oc create secret docker-registry ghcr-pull-secret \
   --docker-server=ghcr.io \
@@ -59,30 +66,24 @@ oc create secret docker-registry ghcr-pull-secret \
   --dry-run=client -o yaml | oc apply -f -
 ```
 
-3) Create app resources from template:
+Use a GitHub token with **`read:packages`**.
+
+3) Create app resources from the template:
 
 ```bash
 oc process -f openshift/mittari-app.yaml | oc apply -f -
 ```
 
-4) Sync runtime environment from local `.env` to OpenShift Secret + ConfigMap:
+4) Put production values in `.env`, then sync them to the cluster:
 
 ```bash
 ./scripts/sync-openshift-env.sh
 ```
 
-5) After the first **successful** workflow run on `main`, point the deployment at a real tag (the template may reference `:latest` before it exists):
+5) After the first successful workflow run on `main`, point the deployment at a real image (the template starts from `ghcr.io/luomus/mittari:latest`):
 
 ```bash
 ./scripts/deploy-openshift.sh
-```
-
-If `gh` cannot list the package (for example **HTTP 404**), set `IMAGE_TAG` to a value from **Packages** on this repo instead of relying on auto-discovery.
-
-Or set a tag you see under **Packages** on GitHub, for example:
-
-```bash
-IMAGE_TAG=latest ./scripts/deploy-openshift.sh
 ```
 
 6) Verify:
@@ -93,43 +94,8 @@ oc get pods
 oc get route mittari
 ```
 
-Open the HTTPS route URL in your browser.
-
-#### Deploy future changes (normal workflow)
-
-1) Push code changes to `main`:
-
-```bash
-git push
-```
-
-2) Wait for GitHub Actions workflow to finish successfully.
-
-See: https://github.com/luomus/mittari/actions
-
-3) Deploy newest image to OpenShift (this also syncs `.env` by default):
+#### Update production env later
 
 ```bash
 ./scripts/deploy-openshift.sh
-```
-
-4) Verify rollout and running image:
-
-```bash
-oc rollout status deployment/mittari
-oc get pods
-oc get deployment mittari -o jsonpath='{.spec.template.spec.containers[0].image}{"\n"}'
-```
-
-#### Optional: deploy a specific image tag
-
-```bash
-IMAGE_TAG=main-0dff309 ./scripts/deploy-openshift.sh
-```
-
-#### Optional: update production secret values later
-
-```bash
-./scripts/sync-openshift-env.sh
-oc rollout status deployment/mittari
 ```

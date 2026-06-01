@@ -24,26 +24,21 @@ require_cmd gh
 
 IMAGE_TAG="${IMAGE_TAG:-}"
 if [ -z "${IMAGE_TAG}" ]; then
-  if short_sha="$(git rev-parse --short=7 HEAD 2>/dev/null)"; then
-    IMAGE_TAG="main-${short_sha}"
-    echo "Using image tag from git HEAD: ${IMAGE_TAG}"
-  fi
-fi
-if [ -z "${IMAGE_TAG}" ]; then
   IMAGE_TAG="$(
     gh api "/orgs/${ORG}/packages/container/${PACKAGE}/versions" --paginate \
-      --jq '[.[] | select([.metadata.container.tags[]? | test("^main-[0-9a-f]{7,}$")] | any)] | if length == 0 then empty else (max_by(.updated_at // .created_at) | (.metadata.container.tags // []) | map(select(test("^main-[0-9a-f]{7,}$"))) | first // empty) end'
+      --jq '[.[] | {created_at, tags: (.metadata.container.tags // [])}] |
+            sort_by(.created_at) | reverse | .[] | .tags[] |
+            select(test("^main-[0-9a-f]{7,}$"))' \
+      | head -n 1
   )"
-  if [ -n "${IMAGE_TAG}" ] && [ "${IMAGE_TAG}" != "null" ]; then
-    echo "Using image tag from GHCR (no git repo): ${IMAGE_TAG}"
-  fi
 fi
 
-if [ -z "${IMAGE_TAG}" ] || [ "${IMAGE_TAG}" = "null" ]; then
-  echo "Could not determine image tag. Run from the mittari clone on the commit you pushed, or set IMAGE_TAG." >&2
+if [ -z "${IMAGE_TAG}" ]; then
+  echo "Could not find a deployable GHCR tag. Set IMAGE_TAG manually." >&2
   exit 1
 fi
 
+echo "Using image tag: ${IMAGE_TAG}"
 IMAGE="${REGISTRY}/${ORG}/${PACKAGE}:${IMAGE_TAG}"
 
 echo "Using project: ${PROJECT}"
