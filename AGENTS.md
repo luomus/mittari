@@ -8,9 +8,9 @@ Avoid extensive error handling.
 
 No fallback logic. No backwards compatibility.
 
-api.laji.fi requires a token to be used. The token is stored in the .env file as LAJI_API_ACCESS_TOKEN.
+api.laji.fi requires a token to be used. The token is stored in `.env.local` (local) and `.env.openshift` (production) as LAJI_API_ACCESS_TOKEN.
 
-The app is run locally with Docker and Docker Compose. Running it with plain Python will fail, so don't try that.
+The app is run locally with Docker Compose, or with **uv** (`uv sync` then `uv run --env-file .env.local …` as in the README). Use one of those so dependencies and `.env.local` are applied; ad‑hoc `python wsgi.py` without a venv or env file is not supported.
 
 The production app is deployed to CSC OpenShift Rahti.
 

@@ -45,12 +45,18 @@ echo "Using project: ${PROJECT}"
 echo "Deploying image: ${IMAGE}"
 
 if [ "${SYNC_ENV_BEFORE_DEPLOY}" = "1" ]; then
-  echo "Syncing environment values from .env to OpenShift..."
-  PROJECT="${PROJECT}" APP_NAME="${APP_NAME}" "${SCRIPT_DIR}/sync-openshift-env.sh"
+  _sync_env_file="${ENV_FILE:-.env.openshift}"
+  echo "Syncing environment values from ${_sync_env_file} to OpenShift..."
+  ENV_FILE="${_sync_env_file}" PROJECT="${PROJECT}" APP_NAME="${APP_NAME}" "${SCRIPT_DIR}/sync-openshift-env.sh"
 fi
 
 oc project "${PROJECT}" >/dev/null
 oc set image "deployment/${APP_NAME}" "web=${IMAGE}"
+# envFrom secrets are read at pod start; updating the secret alone does not
+# restart pods. Restart always bumps the pod template so env sync takes effect
+# even when the image reference is unchanged.
+echo "Restarting deployment so pods reload env from the cluster secret..."
+oc rollout restart "deployment/${APP_NAME}"
 oc rollout status "deployment/${APP_NAME}"
 
 RUNNING_IMAGE="$(oc get deployment "${APP_NAME}" -o jsonpath='{.spec.template.spec.containers[0].image}')"

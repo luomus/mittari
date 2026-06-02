@@ -1,5 +1,8 @@
 
+
 .env
+.env.local
+.env.openshift
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

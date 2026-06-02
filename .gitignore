@@ -1,5 +1,7 @@
 
 .env
+.env.local
+.env.openshift
 .DS_Store
 
 # Byte-compiled / optimized / DLL files

@@ -5,7 +5,7 @@ Observation statistics demo service.
 Requirements:
 
 - Local:
-  - Docker
+  - Docker, or Python 3.12 with `uv`
 - Deploying to OpenShift:
   - `oc`
   - `gh`
@@ -16,12 +16,23 @@ Note:
 
 ## Set up locally
 
-Create a `.env` file in the project root. Copy `.env.example` and fill in values.
+Copy `.env.example` to `.env.local` (local development) and `.env.openshift` (production), and fill in values.
 
-### Run locally
+### Run locally with Docker Compose (recommended)
 
 ```bash
 docker compose up --build
+```
+
+Then open: http://localhost:8080
+
+### Run locally with uv (optional)
+
+From the repo root, install dependencies into `.venv` and start Gunicorn with variables from `.env.local`:
+
+```bash
+uv sync
+uv run --env-file .env.local -- sh -c 'gunicorn --bind "0.0.0.0:${PORT:-8080}" --workers "${GUNICORN_WORKERS:-1}" --reload wsgi:app'
 ```
 
 Then open: http://localhost:8080
@@ -38,7 +49,7 @@ Then open: http://localhost:8080
 oc project mittari
 ```
 
-4) Deploy the newest image (this also syncs `.env` to the cluster by default):
+4) Deploy the newest image (this also syncs `.env.openshift` to the cluster by default):
 
 ```bash
 ./scripts/deploy-openshift.sh
@@ -81,7 +92,7 @@ Use a GitHub token with **`read:packages`**.
 oc process -f openshift/mittari-app.yaml | oc apply -f -
 ```
 
-4) Put production values in `.env`, then sync them to the cluster:
+4) Put production values in `.env.openshift`, then sync them to the cluster:
 
 ```bash
 ./scripts/sync-openshift-env.sh

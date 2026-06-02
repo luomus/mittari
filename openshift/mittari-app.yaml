@@ -20,7 +20,7 @@ parameters:
     required: true
     value: mittari.2.rahtiapp.fi
   - name: ENV_SECRET_NAME
-    description: Secret containing runtime environment variables (from .env).
+    description: Secret containing runtime environment variables (from .env.openshift).
     required: true
     value: mittari-env-secret
 objects:

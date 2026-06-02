@@ -3,7 +3,7 @@ set -euo pipefail
 
 PROJECT="${PROJECT:-mittari}"
 APP_NAME="${APP_NAME:-mittari}"
-ENV_FILE="${ENV_FILE:-.env}"
+ENV_FILE="${ENV_FILE:-.env.openshift}"
 SECRET_NAME="${SECRET_NAME:-${APP_NAME}-env-secret}"
 
 require_cmd() {
@@ -44,6 +44,12 @@ while IFS= read -r raw_line || [ -n "${raw_line}" ]; do
 
   if [ -z "${key}" ]; then
     continue
+  fi
+
+  # Strip one matching pair of surrounding double quotes (dotenv-style), so values match Docker/uv.
+  if [[ "${value}" == \"*\" ]] && [[ "${value}" != "\"" ]]; then
+    value="${value#\"}"
+    value="${value%\"}"
   fi
 
   secret_args+=(--from-literal="${key}=${value}")

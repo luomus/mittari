@@ -5,8 +5,9 @@ services:
     ports:
       - "8080:8080"
     env_file:
-      - .env
+      - .env.local
+    # Mount only app/ so the image .venv (from docker build) is not hidden by the host tree.
     volumes:
-      - ./:/opt/app-root/src
+      - ./app:/opt/app-root/src/app
     command: >
       sh -c "gunicorn --reload --bind 0.0.0.0:${PORT:-8080} --workers 1 wsgi:app"
