@@ -10,6 +10,10 @@ Requirements:
   - `oc`
   - `gh`
 
+Note:
+
+- Caching is enabled. Visit /flush/{cache_secret} to flush the cache.
+
 ## Set up locally
 
 Create a `.env` file in the project root. Copy `.env.example` and fill in values.

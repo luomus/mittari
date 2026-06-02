@@ -20,7 +20,7 @@ def get_json(url: str, *, timeout: float = 60.0) -> dict:
     """GET a JSON document from api.laji.fi using the warehouse REST headers."""
     token = (os.environ.get("LAJI_API_ACCESS_TOKEN") or "").strip()
     if not token:
-        raise FinbifApiError("LAJI_API_ACCESS_TOKEN puuttuu ympäristöstä.")
+        raise FinbifApiError("Access token is missing from environment.")
 
     req = urllib.request.Request(
         url,
@@ -37,18 +37,18 @@ def get_json(url: str, *, timeout: float = 60.0) -> dict:
             body = resp.read().decode()
     except urllib.error.HTTPError as e:
         detail = e.read().decode(errors="replace")[:500]
-        msg = f"FinBIF API virhe ({e.code})."
+        msg = f"api.laji.fi error ({e.code})."
         if detail:
             msg = f"{msg} {detail}"
         raise FinbifApiError(msg, status_code=e.code) from e
     except urllib.error.URLError as e:
-        raise FinbifApiError(f"Yhteys FinBIF API:in epäonnistui: {e.reason!s}") from e
+        raise FinbifApiError(f"Connection error to api.laji.fi: {e.reason!s}") from e
 
     try:
         data = json.loads(body)
     except json.JSONDecodeError as e:
-        raise FinbifApiError("FinBIF API palautti virheellisen JSONin.") from e
+        raise FinbifApiError("api.laji.fi response is not valid JSON.") from e
 
     if not isinstance(data, dict):
-        raise FinbifApiError("FinBIF API palautti odottamattoman vastauksen.")
+        raise FinbifApiError("api.laji.fi response is not a dictionary.")
     return data

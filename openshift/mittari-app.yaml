@@ -20,13 +20,9 @@ parameters:
     required: true
     value: mittari.2.rahtiapp.fi
   - name: ENV_SECRET_NAME
-    description: Secret containing runtime sensitive environment variables.
+    description: Secret containing runtime environment variables (from .env).
     required: true
     value: mittari-env-secret
-  - name: ENV_CONFIGMAP_NAME
-    description: ConfigMap containing runtime non-sensitive environment variables.
-    required: true
-    value: mittari-env-config
 objects:
   - apiVersion: apps/v1
     kind: Deployment
@@ -55,8 +51,6 @@ objects:
               envFrom:
                 - secretRef:
                     name: ${ENV_SECRET_NAME}
-                - configMapRef:
-                    name: ${ENV_CONFIGMAP_NAME}
               readinessProbe:
                 httpGet:
                   path: /healthz
