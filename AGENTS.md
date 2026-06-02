@@ -16,4 +16,4 @@ The production app is deployed to CSC OpenShift Rahti.
 
 For important issues, ask for clarification or advice instead of making assumptions.
 
-Don't do smoke tests unless requested.
+Avoid doing excessive smoke tests or running complex commands unless requested.
