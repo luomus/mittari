@@ -8,6 +8,7 @@ services:
       PORT: 8080
       LAJI_API_ACCESS_TOKEN: ${LAJI_API_ACCESS_TOKEN}
       FLUSH_SECRET_KEY: ${FLUSH_SECRET_KEY}
+      HIDDEN_NAMES: ${HIDDEN_NAMES:-}
     volumes:
       - ./:/opt/app-root/src
     command: >

@@ -4,8 +4,11 @@ Observation statistics demo service.
 
 Requirements:
 
-- **Local:** [Docker](https://docs.docker.com/get-docker/)
-- **Deploy to OpenShift:** [OpenShift CLI](https://docs.openshift.com/container-platform/latest/cli_reference/openshift_cli/getting-started-cli.html) (`oc`) and [GitHub CLI](https://cli.github.com/) (`gh`; the deploy script picks the newest `main-<sha>` image tag from GHCR)
+- Local:
+  - Docker
+- Deploying to OpenShift:
+  - `oc`
+  - `gh`
 
 ## Set up locally
 

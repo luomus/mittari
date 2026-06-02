@@ -8,6 +8,7 @@ strings alone.
 
 from __future__ import annotations
 
+import os
 from urllib.parse import quote, urlencode
 
 from app.services.finbif_client import FinbifApiError, get_json
@@ -16,6 +17,14 @@ _API_BASE = "https://api.laji.fi/warehouse/query/unit/aggregate"
 _TAXA_BASE = "https://api.laji.fi/taxa"
 
 DEFAULT_TAXON_ID = "MX.37600"
+
+
+def _hidden_name_fold_set() -> set[str]:
+    """Names from ``HIDDEN_NAMES`` (``;``-separated) for case-insensitive exact match."""
+    raw = (os.environ.get("HIDDEN_NAMES") or "").strip()
+    if not raw:
+        return set()
+    return {p.strip().casefold() for p in raw.split(";") if p.strip()}
 
 
 def _taxon_id_param(taxon_id: str) -> str:
@@ -154,6 +163,17 @@ def get_observer_taxa_stats(taxon_id: str, year: int | None) -> dict[str, object
             except ValueError:
                 scount = 0
         rows.append({"name": str(name), "species_count": scount})
+
+    hidden = _hidden_name_fold_set()
+    if hidden:
+        out: list[dict[str, object]] = []
+        for row in rows:
+            nm = row["name"]
+            if isinstance(nm, str) and nm.strip().casefold() in hidden:
+                out.append({"name": "piilotettu", "species_count": row["species_count"]})
+            else:
+                out.append(dict(row))
+        rows = out
 
     return {
         "rows": rows,

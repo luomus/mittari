@@ -35,6 +35,7 @@ secret_keys=(
 config_keys=(
   "PORT"
   "GUNICORN_WORKERS"
+  "HIDDEN_NAMES"
 )
 
 is_in_list() {
