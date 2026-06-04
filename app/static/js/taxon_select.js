@@ -2,13 +2,13 @@
  * Taxon name autocomplete (FinBIF /autocomplete/taxa via same-origin proxy).
  *
  *   <div data-taxon-select data-autocomplete-url="...">
- *     <label for="…">…</label>
- *     <div class="taxon-select__query-wrap">
- *       <input type="text" class="taxon-select__query" autocomplete="off" />
- *     </div>
+ *     …
  *     <input type="hidden" name="taxon_id" value="" />
  *     <ul class="taxon-select__suggestions" hidden></ul>
  *   </div>
+ *
+ * Optional `data-taxon-id-name` on the root (default `taxon_id`) sets which hidden
+ * input receives the selected taxon id — use e.g. `taxon` for GET query param names.
  */
 (function () {
   var DEBOUNCE_MS = 300;
@@ -30,8 +30,9 @@
   function init(root) {
     var endpoint =
       root.getAttribute("data-autocomplete-url") || "/api/finbif/autocomplete/taxa";
+    var idInputName = root.getAttribute("data-taxon-id-name") || "taxon_id";
     var queryInput = root.querySelector(".taxon-select__query");
-    var idInput = root.querySelector('input[name="taxon_id"]');
+    var idInput = root.querySelector('input[name="' + idInputName + '"]');
     var ul = root.querySelector(".taxon-select__suggestions");
     if (!queryInput || !idInput || !ul) return;
 

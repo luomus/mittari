@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Puuttuvat lajit — {{ taxon_label or taxon_id }}{% endblock %}
+{% block content %}
+  <nav aria-label="Sivupolku">
+    <a href="{{ url_for('main.index') }}">Etusivu</a>
+    <span aria-hidden="true"> / </span>
+    <span>Puuttuvat lajit</span>
+  </nav>
+  <h1>Lajit ulommalla alueella, ei sisemmällä</h1>
+  <form class="miss-form" method="get" action="{{ url_for('miss.miss_page') }}">
+    <div
+      data-taxon-select
+      data-autocomplete-url="{{ url_for('api.autocomplete_taxa') }}"
+      data-taxon-id-name="taxon"
+    >
+      <h4><label for="miss-taxon-query">Juuritaksoni</label></h4>
+      <div class="taxon-select__query-wrap">
+        <input
+          id="miss-taxon-query"
+          class="taxon-select__query"
+          type="text"
+          name="taxon_query"
+          autocomplete="off"
+          placeholder="Kirjoita taksonin nimi…"
+          value="{{ taxon_label or '' }}"
+        />
+      </div>
+      <input type="hidden" name="taxon" value="{{ taxon_id }}" />
+      <ul class="taxon-select__suggestions" hidden></ul>
+    </div>
+    <div>
+      <h4><label for="miss-lat">Leveysaste</label></h4>
+      <input id="miss-lat" type="text" name="lat" inputmode="decimal" value="{{ lat }}" />
+    </div>
+    <div>
+      <h4><label for="miss-lon">Pituusaste</label></h4>
+      <input id="miss-lon" type="text" name="lon" inputmode="decimal" value="{{ lon }}" />
+    </div>
+    <div>
+      <h4><label for="miss-since">Vuodesta</label></h4>
+      <input id="miss-since" type="text" name="since_year" inputmode="numeric" value="{{ since_year }}" />
+    </div>
+    <div>
+      <h4><label for="miss-near">Sisempi säde (km)</label></h4>
+      <input id="miss-near" type="text" name="near" inputmode="numeric" value="{{ near_km }}" />
+    </div>
+    <div>
+      <h4><label for="miss-far">Ulompi säde (km)</label></h4>
+      <input id="miss-far" type="text" name="far" inputmode="numeric" value="{{ far_km }}" />
+    </div>
+    <button type="submit">Päivitä</button>
+  </form>
+  <p>
+    Lajit, joilla on havaintoja noin <strong>{{ far_km }} km</strong> säteellä pisteestä
+    (<strong>{{ lat }}</strong>, <strong>{{ lon }}</strong>), mutta ei noin
+    <strong>{{ near_km }} km</strong> säteellä. Juuritaksoni:
+    <a href="https://tun.fi/{{ taxon_id }}">{{ taxon_label or taxon_id }}</a>.
+    Aikaväli: <strong>{{ since_year }}</strong> — kuluva vuosi. Rajaus: Suomi, lajitaso, ei laatumerkintöjä.
+  </p>
+  {% if error %}
+    <p role="alert">{{ error }}</p>
+  {% endif %}
+  <div>
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">#</th>
+          <th scope="col">Nimi</th>
+          <th scope="col">Tieteellinen</th>
+          <th scope="col">Havaintoja (ulompi)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td><a href="https://tun.fi/{{ row.taxon_id }}">{{ row.fi or row.taxon_id }}</a></td>
+            <td><em>{{ row.sci }}</em></td>
+            <td>{{ row.count }}</td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="4">{% if not error %}Ei lajeja listattavaksi.{% else %}—{% endif %}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

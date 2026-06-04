@@ -33,9 +33,10 @@ def create_app() -> Flask:
     app.config.setdefault("CACHE_DEFAULT_TIMEOUT", 300)
     cache.init_app(app)
 
-    from app.routes import api_bp, main_bp, stats_bp
+    from app.routes import api_bp, main_bp, miss_bp, stats_bp
 
     app.register_blueprint(main_bp)
+    app.register_blueprint(miss_bp)
     app.register_blueprint(stats_bp)
     app.register_blueprint(api_bp)
 

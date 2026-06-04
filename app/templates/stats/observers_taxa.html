@@ -8,7 +8,12 @@
   </nav>
   <h1>Havainnoijat ja lajimäärät</h1>
   <p>Eniten Suomessa lajeja havainneet. Mukana ei ole ei-luonnonvaraisia, epävarmoja tai virheellisiä havaintoja, nollahavaintoja, tai havaintoja, joissa havainnoija on valinnut nimensä piilotettavaksi. Taulukko päivittyy kerran vuorokaudessa.</p>
-  <form id="observers-taxa-nav" method="get" action="#">
+  <form
+    method="get"
+    action="#"
+    data-taxon-submit-url-template="{{ url_for('stats.observers_taxa_page', taxon_id='_TAXON_') }}"
+    data-taxon-append-path-selector="#observers-year"
+  >
     <div
       data-taxon-select
       data-autocomplete-url="{{ url_for('api.autocomplete_taxa') }}"
@@ -38,30 +43,6 @@
     </div>
     <button type="submit">Siirry</button>
   </form>
-  <script>
-    (function () {
-      var form = document.getElementById("observers-taxa-nav");
-      if (!form) return;
-      var urlTemplate = {{ url_for('stats.observers_taxa_page', taxon_id='_TAXON_')|tojson }};
-      form.addEventListener("submit", function (e) {
-        e.preventDefault();
-        var idInput = form.querySelector('input[name="taxon_id"]');
-        var id = idInput && idInput.value.trim();
-        if (!id) return;
-        var submitBtn = form.querySelector('button[type="submit"]');
-        if (submitBtn) {
-          submitBtn.disabled = true;
-          submitBtn.textContent = "Ladataan…";
-        }
-        form.setAttribute("aria-busy", "true");
-        var href = urlTemplate.replace("_TAXON_", id);
-        var yearSel = form.querySelector('select[name="year"]');
-        var y = yearSel && yearSel.value.trim();
-        if (y) href = href + "/" + y;
-        window.location.href = href;
-      });
-    })();
-  </script>
   <p>
     Taksoni: <a href="https://tun.fi/{{ taxon_id }}">{{ taxon_label or taxon_id }}</a> · Ajankohta:
     <strong>{% if year is not none %}{{ year }}{% else %}Kaikki vuodet{% endif %}</strong>
