@@ -44,3 +44,4 @@ def flush_cache(flush_secret_key: str):
     removed = _count_filesystem_cache_entries(cache_dir)
     cache.clear()
     return f"ok: removed {removed} cache entries\n", 200, {"Content-Type": "text/plain; charset=utf-8"}
+

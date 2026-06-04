@@ -97,6 +97,15 @@ form.miss-form [data-taxon-select] {
   width: 100%;
 }
 
+form.miss-form button[type="submit"].miss-form__submit--pending {
+  background: #6b7b76;
+  cursor: wait;
+}
+
+form.miss-form button[type="submit"].miss-form__submit--pending:hover {
+  background: #6b7b76;
+}
+
 label {
   font-weight: 600;
 }
@@ -105,6 +114,16 @@ input,
 select,
 button {
   font: inherit;
+}
+
+input[type="number"] {
+  display: block;
+  width: 100%;
+  margin-top: 0.25rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: #fff;
 }
 
 input[type="text"],
@@ -118,6 +137,7 @@ select {
   background: #fff;
 }
 
+input[type="number"]:focus,
 input:focus,
 select:focus {
   outline: 2px solid var(--accent);
@@ -171,7 +191,7 @@ button[type="submit"]:hover {
 
 .taxon-select__suggestions {
   position: absolute;
-  z-index: 1;
+  z-index: 1200;
   left: 0;
   right: 0;
   top: 100%;
@@ -249,6 +269,41 @@ tbody tr:last-child td {
 td[colspan] {
   color: var(--muted);
   font-style: italic;
+}
+
+/* coord_radius_map.js — map + rectangles */
+.coord-radius-map {
+  margin: 0 0 1rem;
+}
+
+.coord-radius-map__viewport {
+  height: min(55vh, 22rem);
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  background: #e8ebe6;
+}
+
+.coord-radius-map__viewport .leaflet-container {
+  font: inherit;
+}
+
+.coord-radius-map__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem 1rem;
+  margin-top: 0.75rem;
+}
+
+.coord-radius-map__hint {
+  margin: 0.5rem 0 0;
+  font-size: 0.9rem;
+  color: #5c1f1f;
+}
+
+body.miss-map-page main {
+  max-width: min(100%, 52rem);
 }
 
 footer {

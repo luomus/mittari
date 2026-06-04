@@ -10,6 +10,8 @@ from app.services.finbif_client import FinbifApiError, get_json
 
 _API_BASE = "https://api.laji.fi/warehouse/query/unit/aggregate"
 
+MISS_TABLE_MAX_ROWS = 250
+
 
 def _taxon_id_param(taxon_id: str) -> str:
     tid = taxon_id.strip()
@@ -19,6 +21,7 @@ def _taxon_id_param(taxon_id: str) -> str:
 
 
 def bounding_box(lat: float, lon: float, box_size_km: float) -> tuple[float, float, float, float]:
+    # Keep in sync with `boundingBox` in app/static/js/coord_radius_map.js
     r_earth = 6371.0
     lat_rad = math.radians(lat)
     angular_distance = box_size_km / r_earth
@@ -35,9 +38,15 @@ def bounding_box(lat: float, lon: float, box_size_km: float) -> tuple[float, flo
     )
 
 
+def laji_observation_list_outer_box_coordinates(lat: float, lon: float, far_km: float) -> str:
+    """``coordinates`` value for laji.fi Havainnot (same outer box as warehouse query)."""
+    return _coordinates_param(lat, lon, float(far_km))
+
+
 def _coordinates_param(lat: float, lon: float, radius_km: float) -> str:
     lat_min, lat_max, lon_min, lon_max = bounding_box(lat, lon, radius_km)
-    return f"{lat_min}:{lat_max}:{lon_min}:{lon_max}:WGS84:1"
+    return f"{lat_min}:{lat_max}:{lon_min}:{lon_max}:WGS84:0.5"
+
 
 
 def _fetch_species_counts(
@@ -175,4 +184,4 @@ def missing_species_between_rings(
 
     rows.sort(key=lambda r: int(r.get("count", 0)), reverse=True)
 
-    return {"rows": rows, "error": None}
+    return {"rows": rows[:MISS_TABLE_MAX_ROWS], "error": None}

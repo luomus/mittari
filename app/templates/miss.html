@@ -1,19 +1,27 @@
 {% extends "base.html" %}
 {% block title %}Puuttuvat lajit — {{ taxon_label or taxon_id }}{% endblock %}
+{% block body_class %}miss-map-page{% endblock %}
+{% block styles %}
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+{% endblock %}
+{% block scripts %}
+  <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script defer src="{{ url_for('static', filename='js/coord_radius_map.js') }}"></script>
+{% endblock %}
 {% block content %}
   <nav aria-label="Sivupolku">
     <a href="{{ url_for('main.index') }}">Etusivu</a>
     <span aria-hidden="true"> / </span>
     <span>Puuttuvat lajit</span>
   </nav>
-  <h1>Lajit ulommalla alueella, ei sisemmällä</h1>
+  <h1>Puuttuvat lajit</h1>
   <form class="miss-form" method="get" action="{{ url_for('miss.miss_page') }}">
     <div
       data-taxon-select
       data-autocomplete-url="{{ url_for('api.autocomplete_taxa') }}"
       data-taxon-id-name="taxon"
     >
-      <h4><label for="miss-taxon-query">Juuritaksoni</label></h4>
+      <h4><label for="miss-taxon-query">Hae lajiryhmä</label></h4>
       <div class="taxon-select__query-wrap">
         <input
           id="miss-taxon-query"
@@ -28,34 +36,62 @@
       <input type="hidden" name="taxon" value="{{ taxon_id }}" />
       <ul class="taxon-select__suggestions" hidden></ul>
     </div>
-    <div>
-      <h4><label for="miss-lat">Leveysaste</label></h4>
-      <input id="miss-lat" type="text" name="lat" inputmode="decimal" value="{{ lat }}" />
-    </div>
-    <div>
-      <h4><label for="miss-lon">Pituusaste</label></h4>
-      <input id="miss-lon" type="text" name="lon" inputmode="decimal" value="{{ lon }}" />
+    <div
+      class="coord-radius-map"
+      data-coord-radius-map
+      data-lat-input="#miss-lat"
+      data-lon-input="#miss-lon"
+      data-near-input="#miss-near"
+      data-far-input="#miss-far"
+      data-initial-zoom="9"
+      data-max-bounds="59.0,18.5,70.2,31.8"
+    >
+      <h4>Liikuta karttaikonia</h4>
+      <div class="coord-radius-map__viewport" aria-label="Kartta: vedä merkkiä"></div>
+      <p class="coord-radius-map__hint" hidden></p>
+      <div class="coord-radius-map__grid">
+        <div>
+          <label for="miss-lat">Leveysaste</label>
+          <input id="miss-lat" type="text" name="lat" inputmode="decimal" value="{{ lat }}" />
+        </div>
+        <div>
+          <label for="miss-lon">Pituusaste</label>
+          <input id="miss-lon" type="text" name="lon" inputmode="decimal" value="{{ lon }}" />
+        </div>
+        <div>
+          <label for="miss-near">Sisempi säde (km)</label>
+          <input id="miss-near" type="number" name="near" min="1" step="1" value="{{ near_km }}" />
+        </div>
+        <div>
+          <label for="miss-far">Ulompi säde (km)</label>
+          <input id="miss-far" type="number" name="far" min="1" step="1" value="{{ far_km }}" />
+        </div>
+      </div>
     </div>
     <div>
       <h4><label for="miss-since">Vuodesta</label></h4>
       <input id="miss-since" type="text" name="since_year" inputmode="numeric" value="{{ since_year }}" />
     </div>
-    <div>
-      <h4><label for="miss-near">Sisempi säde (km)</label></h4>
-      <input id="miss-near" type="text" name="near" inputmode="numeric" value="{{ near_km }}" />
-    </div>
-    <div>
-      <h4><label for="miss-far">Ulompi säde (km)</label></h4>
-      <input id="miss-far" type="text" name="far" inputmode="numeric" value="{{ far_km }}" />
-    </div>
-    <button type="submit">Päivitä</button>
+    <button type="submit" class="miss-form__submit">Päivitä</button>
   </form>
+  <script>
+    (function () {
+      var form = document.querySelector("form.miss-form");
+      if (!form) return;
+      form.addEventListener("submit", function () {
+        var btn = form.querySelector('button[type="submit"]');
+        if (!btn || btn.disabled) return;
+        btn.disabled = true;
+        btn.textContent = "Haetaan...";
+        btn.classList.add("miss-form__submit--pending");
+      });
+    })();
+  </script>
   <p>
-    Lajit, joilla on havaintoja noin <strong>{{ far_km }} km</strong> säteellä pisteestä
+    <a href="https://tun.fi/{{ taxon_id }}">{{ taxon_label or taxon_id }}</a> -lajit, joilla on havaintoja noin <strong>{{ far_km }} km</strong> säteellä pisteestä
     (<strong>{{ lat }}</strong>, <strong>{{ lon }}</strong>), mutta ei noin
-    <strong>{{ near_km }} km</strong> säteellä. Juuritaksoni:
-    <a href="https://tun.fi/{{ taxon_id }}">{{ taxon_label or taxon_id }}</a>.
-    Aikaväli: <strong>{{ since_year }}</strong> — kuluva vuosi. Rajaus: Suomi, lajitaso, ei laatumerkintöjä.
+    <strong>{{ near_km }} km</strong> säteellä.
+    Aikaväli: <strong>{{ since_year }}</strong> — kuluva vuosi.
   </p>
   {% if error %}
     <p role="alert">{{ error }}</p>
@@ -74,7 +110,9 @@
         {% for row in rows %}
           <tr>
             <td>{{ loop.index }}</td>
-            <td><a href="https://tun.fi/{{ row.taxon_id }}">{{ row.fi or row.taxon_id }}</a></td>
+            <td>
+              <a href="https://laji.fi/observation/list?target={{ row.taxon_id }}&amp;time={{ since_year }}-01-01%2F&amp;coordinates={{ laji_obs_coordinates }}">{{ row.fi or row.taxon_id }}</a>
+            </td>
             <td><em>{{ row.sci }}</em></td>
             <td>{{ row.count }}</td>
           </tr>

@@ -84,6 +84,7 @@ def miss_page():
             far_km=request.args.get("far") or str(_DEFAULT_FAR),
             rows=[],
             error=parse_err or "Virhe.",
+            laji_obs_coordinates=None,
         )
 
     result = miss_service.missing_species_between_rings(
@@ -95,6 +96,11 @@ def miss_page():
         far_km=int(parsed["far_km"]),
     )
     taxon_label = observers_taxa.get_taxon_display_label(str(parsed["taxon_id"]))
+    laji_obs_coordinates = miss_service.laji_observation_list_outer_box_coordinates(
+        float(parsed["lat"]),
+        float(parsed["lon"]),
+        int(parsed["far_km"]),
+    )
 
     return render_template(
         "miss.html",
@@ -107,4 +113,5 @@ def miss_page():
         far_km=parsed["far_km"],
         rows=result["rows"],
         error=result.get("error"),
+        laji_obs_coordinates=laji_obs_coordinates,
     )

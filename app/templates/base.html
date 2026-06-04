@@ -5,8 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{% block title %}Mittari{% endblock %} - Lajitietokeskuksen testisivusto</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+    {% block styles %}{% endblock %}
   </head>
-  <body>
+  <body class="{% block body_class %}{% endblock %}">
     <header>
       <a href="{{ url_for('main.index') }}">Mittari - Kokeilukäytössä olevia tilastointeja</a>
     </header>
