@@ -5,14 +5,14 @@ Observation statistics demo service.
 Requirements:
 
 - Local:
-  - Docker, or Python 3.12 with `uv`
+  - Docker or `uv`
 - Deploying to OpenShift:
   - `oc`
   - `gh`
 
 Note:
 
-- Caching is enabled. Visit /flush/{cache_secret} to flush the cache.
+- Caching can be enabled/disabled in env var `CACHING_ON`. Visit /flush/{cache_secret} to flush the cache.
 
 ## Set up locally
 

@@ -5,6 +5,13 @@ from flask import Flask
 from app.extensions import cache
 
 
+def _caching_on() -> bool:
+    raw = (os.environ.get("CACHING_ON") or "").strip().lower()
+    if not raw:
+        return True
+    return raw in ("true")
+
+
 def create_app() -> Flask:
     app = Flask(
         __name__,
@@ -12,10 +19,13 @@ def create_app() -> Flask:
         static_folder="static",
     )
 
-    cache_dir = os.path.join(app.instance_path, "cache")
-    os.makedirs(cache_dir, exist_ok=True)
-    app.config.setdefault("CACHE_TYPE", "FileSystemCache")
-    app.config.setdefault("CACHE_DIR", cache_dir)
+    if _caching_on():
+        cache_dir = os.path.join(app.instance_path, "cache")
+        os.makedirs(cache_dir, exist_ok=True)
+        app.config.setdefault("CACHE_TYPE", "FileSystemCache")
+        app.config.setdefault("CACHE_DIR", cache_dir)
+    else:
+        app.config.setdefault("CACHE_TYPE", "NullCache")
     app.config.setdefault("CACHE_DEFAULT_TIMEOUT", 300)
     cache.init_app(app)
 
