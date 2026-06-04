@@ -8,8 +8,12 @@ from app.extensions import cache
 def _caching_on() -> bool:
     raw = (os.environ.get("CACHING_ON") or "").strip().lower()
     if not raw:
+        return False
+    if raw == "true":
         return True
-    return raw in ("true")
+    if raw == "false":
+        return False
+    return False
 
 
 def create_app() -> Flask:
