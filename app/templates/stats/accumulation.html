@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+{% block title %}Havaintojen kertymä{% endblock %}
+{% block content %}
+  <style>
+    main:has(.accumulation-chart-wrap) {
+      max-width: 56rem;
+    }
+    .accumulation-chart-wrap {
+      position: relative;
+      height: min(55vh, 520px);
+      width: 100%;
+      margin: 1rem 0 0;
+    }
+  </style>
+  <nav aria-label="Sivupolku">
+    <a href="{{ url_for('main.index') }}">Etusivu</a>
+    <span aria-hidden="true"> / </span>
+    <span>Havaintojen kertymä</span>
+  </nav>
+  <h1>Havaintojen kertymä</h1>
+  <p>
+    Suomen luontohavaintojen <strong>kumulatiivinen</strong> lukumäärä vuosittain Lajitietokeskuksen rajatussa avoimessa aineistossa (vain luonnonvaraiset tai tuntematon, laatusuodatus kuten muissa Mittarin tilastoissa). Jokainen viiva on yksi <strong>kaari</strong> (10 eniten havaintoja sisältävää kaarta); vuosi perustuu tapahtuman vuoteen (<code>gathering.conversions.year</code>), kaari tunnisteeseen <code>unit.linkings.taxon.phylumId</code>). Tiedot haetaan api.laji.fi -rajapinnasta; sivu välimuistitetaan noin 20 tunniksi.
+  </p>
+  {% if error %}
+    <p role="alert">{{ error }}</p>
+  {% elif years and series %}
+    <div class="accumulation-chart-wrap">
+      <canvas id="accumulation-chart" aria-label="Kuvaaja: kumulatiiviset havainnot vuosittain kaarelittain"></canvas>
+    </div>
+  {% else %}
+    <p>Ei näytettäviä tietoja.</p>
+  {% endif %}
+{% endblock %}
+{% block scripts %}
+  {{ super() }}
+  {% if not error and years and series %}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script>
+      (function () {
+        var canvas = document.getElementById("accumulation-chart");
+        if (!canvas || typeof Chart === "undefined") return;
+        var years = {{ years|tojson }};
+        var series = {{ series|tojson }};
+        var fmt = new Intl.NumberFormat("fi-FI");
+        var palette = [
+          "#1b4332",
+          "#2d6a4f",
+          "#40916c",
+          "#52b788",
+          "#74c69d",
+          "#95d5b2",
+          "#2c5282",
+          "#2b6cb0",
+          "#805ad5",
+          "#c05621",
+        ];
+        var YEAR_START = 1800;
+        var YEARS_PER_SECOND = 5;
+        var lastDataYear = years.length ? years[years.length - 1] : YEAR_START;
+
+        function xAxisMax(dataYear) {
+          if (dataYear >= lastDataYear) return lastDataYear;
+          return Math.max(dataYear, YEAR_START + YEARS_PER_SECOND);
+        }
+
+        function sliceDatasets(upToYear) {
+          return series.map(function (s, i) {
+            var pts = [];
+            for (var j = 0; j < years.length; j++) {
+              if (years[j] > upToYear) break;
+              pts.push({ x: years[j], y: s.cumulative[j] });
+            }
+            var name = s.scientific_name || s.phylum_id || "";
+            return {
+              label: name,
+              data: pts,
+              borderColor: palette[i % palette.length],
+              backgroundColor: "transparent",
+              fill: false,
+              tension: 0.12,
+              pointRadius: 0,
+              pointHitRadius: 6,
+              borderWidth: 2,
+            };
+          });
+        }
+
+        function createEndLabelPlugin() {
+          return {
+            id: "mittariPhylumEndLabels",
+            afterDraw: function (chart) {
+              var ctx = chart.ctx;
+              var textX = chart.chartArea.right - 4;
+              ctx.save();
+              ctx.font =
+                '600 12px system-ui, -apple-system, "Segoe UI", sans-serif';
+              ctx.textAlign = "right";
+              ctx.textBaseline = "middle";
+              chart.data.datasets.forEach(function (ds, i) {
+                var meta = chart.getDatasetMeta(i);
+                if (!meta || meta.hidden || !meta.data || !meta.data.length) return;
+                var el = meta.data[meta.data.length - 1];
+                if (el == null || el.skip) return;
+                var s = series[i];
+                var txt = (s && s.scientific_name) || ds.label || "";
+                if (!txt) return;
+                ctx.strokeStyle = "rgba(255,255,255,0.92)";
+                ctx.lineWidth = 4;
+                ctx.lineJoin = "round";
+                ctx.miterLimit = 2;
+                ctx.strokeText(txt, textX, el.y);
+                ctx.fillStyle = ds.borderColor || palette[i % palette.length];
+                ctx.fillText(txt, textX, el.y);
+              });
+              ctx.restore();
+            },
+          };
+        }
+
+        var endLabelPlugin = createEndLabelPlugin();
+
+        function maxY(datasets) {
+          var m = 0;
+          datasets.forEach(function (ds) {
+            (ds.data || []).forEach(function (pt) {
+              if (pt && typeof pt.y === "number" && pt.y > m) m = pt.y;
+            });
+          });
+          return m;
+        }
+
+        function buildChart(datasets, xMax, yMax) {
+          return new Chart(canvas.getContext("2d"), {
+            type: "line",
+            data: { datasets: datasets },
+            plugins: [endLabelPlugin],
+            options: {
+              layout: {
+                padding: { right: 220, left: 4, top: 8, bottom: 8 },
+              },
+              responsive: true,
+              maintainAspectRatio: false,
+              interaction: { mode: "index", intersect: false },
+              plugins: {
+                legend: {
+                  display: false,
+                },
+                tooltip: {
+                  callbacks: {
+                    title: function (items) {
+                      var x = items[0] && items[0].parsed && items[0].parsed.x;
+                      return x != null ? String(Math.round(x)) : "";
+                    },
+                    label: function (ctx) {
+                      return (
+                        (ctx.dataset && ctx.dataset.label ? ctx.dataset.label + ": " : "") +
+                        fmt.format(ctx.parsed.y)
+                      );
+                    },
+                  },
+                },
+              },
+              scales: {
+                x: {
+                  type: "linear",
+                  min: YEAR_START,
+                  max: xMax,
+                  title: { display: true, text: "Vuosi" },
+                  ticks: {
+                    maxTicksLimit: 16,
+                    callback: function (v) {
+                      return fmt.format(v);
+                    },
+                  },
+                },
+                y: {
+                  min: 0,
+                  max: yMax,
+                  title: { display: true, text: "Havaintoyksiköiden lukumäärä (kumulatiivinen)" },
+                  ticks: {
+                    callback: function (v) {
+                      return fmt.format(v);
+                    },
+                  },
+                },
+              },
+            },
+          });
+        }
+
+        function fullStaticChart() {
+          var ds = sliceDatasets(lastDataYear);
+          var yM = maxY(ds);
+          buildChart(ds, lastDataYear, yM > 0 ? Math.ceil(yM * 1.06) : 1);
+        }
+
+        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          fullStaticChart();
+          return;
+        }
+
+        var currentYear = YEAR_START;
+        var ds0 = sliceDatasets(currentYear);
+        var y0 = maxY(ds0);
+        var chart = buildChart(
+          ds0,
+          xAxisMax(currentYear),
+          y0 > 0 ? Math.ceil(y0 * 1.06) : 1
+        );
+
+        var iv = setInterval(function () {
+          currentYear += YEARS_PER_SECOND;
+          if (currentYear >= lastDataYear) {
+            currentYear = lastDataYear;
+            clearInterval(iv);
+          }
+          var ds = sliceDatasets(currentYear);
+          var yM = maxY(ds);
+          var yAxisMax = yM > 0 ? Math.ceil(yM * 1.06) : 1;
+          chart.data.datasets.forEach(function (d, i) {
+            d.data = ds[i].data;
+          });
+          chart.options.scales.x.max = xAxisMax(currentYear);
+          chart.options.scales.y.max = yAxisMax;
+          chart.update("none");
+        }, 1000);
+      })();
+    </script>
+  {% endif %}
+{% endblock %}

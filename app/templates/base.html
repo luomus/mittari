@@ -10,7 +10,7 @@
     <header>
       <a href="{{ url_for('main.index') }}">Mittari - Kokeilukäytössä olevia tilastointeja</a>
     </header>
-    <main>{% block content %}{% endblock %}</main>
+    <main class="{% block main_class %}{% endblock %}">{% block content %}{% endblock %}</main>
     <script defer src="{{ url_for('static', filename='js/taxon_select.js') }}"></script>
     <script defer src="{{ url_for('static', filename='js/year_select.js') }}"></script>
     {% block scripts %}{% endblock %}

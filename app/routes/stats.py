@@ -1,11 +1,23 @@
 from flask import Blueprint, render_template
 
 from app.extensions import cache
-from app.services import observers_taxa
+from app.services import accumulation, observers_taxa
 
 bp = Blueprint("stats", __name__, url_prefix="/stats")
 
 CACHE_20_HOURS = 20 * 3600
+
+
+@bp.route("/accumulation")
+@cache.cached(timeout=CACHE_20_HOURS)
+def accumulation_page():
+    data = accumulation.get_cumulative_series_by_phylum()
+    return render_template(
+        "stats/accumulation.html",
+        years=data["years"],
+        series=data["series"],
+        error=data.get("error"),
+    )
 
 
 @bp.route("/observers/taxa/<taxon_id>/<int:year>")

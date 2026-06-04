@@ -9,6 +9,7 @@ strings alone.
 from __future__ import annotations
 
 import os
+import re
 from urllib.parse import quote, urlencode
 
 from app.services.finbif_client import FinbifApiError, get_json
@@ -17,6 +18,19 @@ _API_BASE = "https://api.laji.fi/warehouse/query/unit/aggregate"
 _TAXA_BASE = "https://api.laji.fi/taxa"
 
 DEFAULT_TAXON_ID = "MX.37600"
+
+_MX_QNAME_RE = re.compile(r"\b(MX\.[A-Za-z0-9._-]+)\b")
+
+
+def normalize_taxon_id_for_api(taxon_id: str) -> str:
+    """Prefer short MX qname for ``GET /taxa/{id}`` when values embed a URI or other text."""
+    tid = taxon_id.strip()
+    if not tid:
+        return tid
+    m = _MX_QNAME_RE.search(tid)
+    if m:
+        return m.group(1)
+    return tid
 
 
 def _hidden_name_fold_set() -> set[str]:
@@ -34,14 +48,14 @@ def _taxon_id_param(taxon_id: str) -> str:
         return tid
     return tid
 
-def get_taxon_display_label(taxon_id: str) -> str | None:
-    """Resolve taxon id to ``scientific name (Finnish vernacular)`` via ``GET /taxa/{id}``.
 
-    Returns ``None`` if the request fails or names are missing.
-    ``Accept-Language: fi`` is set on the HTTP client so ``vernacularName`` is Finnish when available.
-    """
+def _get_taxon_document(taxon_id: str) -> dict | None:
+    """``GET /taxa/{id}`` JSON object, or ``None`` on error / missing id."""
     tid = taxon_id.strip()
     if not tid:
+        return None
+    lookup_id = normalize_taxon_id_for_api(tid)
+    if not lookup_id:
         return None
     params = {
         "checklistVersion": "current",
@@ -49,13 +63,18 @@ def get_taxon_display_label(taxon_id: str) -> str | None:
         "includeDescriptions": "false",
         "includeRedListEvaluations": "false",
     }
-    path = quote(tid, safe="")
+    path = quote(lookup_id, safe="")
     url = f"{_TAXA_BASE}/{path}?{urlencode(params)}"
     try:
         data = get_json(url)
     except FinbifApiError:
         return None
+    if isinstance(data, dict):
+        return data
+    return None
 
+
+def _scientific_name_from_document(data: dict) -> str:
     raw_sci = data.get("scientificName")
     if isinstance(raw_sci, str):
         sci = raw_sci.strip()
@@ -63,6 +82,38 @@ def get_taxon_display_label(taxon_id: str) -> str | None:
         sci = str(raw_sci).strip()
     else:
         sci = ""
+
+    if not sci:
+        raw_disp = data.get("scientificNameDisplayName")
+        if isinstance(raw_disp, str):
+            sci = raw_disp.strip()
+        elif raw_disp is not None:
+            sci = str(raw_disp).strip()
+        else:
+            sci = ""
+    return sci
+
+
+def get_taxon_scientific_name(taxon_id: str) -> str | None:
+    """Scientific name only from ``GET /taxa/{id}`` (no vernacular)."""
+    data = _get_taxon_document(taxon_id)
+    if not data:
+        return None
+    sci = _scientific_name_from_document(data)
+    return sci or None
+
+
+def get_taxon_display_label(taxon_id: str) -> str | None:
+    """Resolve taxon id to ``scientific name (Finnish vernacular)`` via ``GET /taxa/{id}``.
+
+    Returns ``None`` if the request fails or names are missing.
+    ``Accept-Language: fi`` is set on the HTTP client so ``vernacularName`` is Finnish when available.
+    """
+    data = _get_taxon_document(taxon_id)
+    if not data:
+        return None
+
+    sci = _scientific_name_from_document(data)
 
     vern_raw = data.get("vernacularName")
     if isinstance(vern_raw, str):
