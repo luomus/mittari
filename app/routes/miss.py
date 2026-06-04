@@ -20,7 +20,7 @@ def _parse_miss_args() -> tuple[dict[str, object] | None, str | None]:
     """Return (params dict, error Finnish) — error means skip FinBIF."""
     raw_lat = request.args.get("lat", type=str, default=str(_DEFAULT_LAT))
     raw_lon = request.args.get("lon", type=str, default=str(_DEFAULT_LON))
-    raw_taxon = request.args.get("taxon", type=str, default=_DEFAULT_TAXON)
+    raw_taxon = request.args.get("taxon_id", type=str, default=_DEFAULT_TAXON)
     raw_since = request.args.get("since_year", type=str, default=str(_DEFAULT_SINCE_YEAR))
     raw_near = request.args.get("near", type=str, default=str(_DEFAULT_NEAR))
     raw_far = request.args.get("far", type=str, default=str(_DEFAULT_FAR))
@@ -70,7 +70,7 @@ def _parse_miss_args() -> tuple[dict[str, object] | None, str | None]:
 def miss_page():
     parsed, parse_err = _parse_miss_args()
     if parse_err or parsed is None:
-        raw_taxon = (request.args.get("taxon") or _DEFAULT_TAXON).strip()
+        raw_taxon = (request.args.get("taxon_id") or _DEFAULT_TAXON).strip()
         return render_template(
             "miss.html",
             lat=request.args.get("lat") or str(_DEFAULT_LAT),

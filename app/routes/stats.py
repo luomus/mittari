@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template
 
+from app.disabled_routes import reject_if_request_path_disabled
 from app.extensions import cache
 from app.services import observers_taxa
 
@@ -10,6 +11,7 @@ CACHE_20_HOURS = 20 * 3600
 
 @bp.route("/observers/taxa/<taxon_id>/<int:year>")
 @bp.route("/observers/taxa/<taxon_id>", defaults={"year": None})
+@reject_if_request_path_disabled
 @cache.cached(timeout=CACHE_20_HOURS)
 def observers_taxa_page(taxon_id: str, year: int | None):
     result = observers_taxa.get_observer_taxa_stats(taxon_id=taxon_id, year=year)

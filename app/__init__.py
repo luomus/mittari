@@ -2,6 +2,7 @@ import os
 
 from flask import Flask
 
+from app.disabled_routes import is_url_path_disabled, parse_disabled_route_prefixes
 from app.extensions import cache
 
 
@@ -32,6 +33,9 @@ def create_app() -> Flask:
         app.config.setdefault("CACHE_TYPE", "NullCache")
     app.config.setdefault("CACHE_DEFAULT_TIMEOUT", 300)
     cache.init_app(app)
+
+    app.config["DISABLED_ROUTE_PREFIXES"] = parse_disabled_route_prefixes()
+    app.add_template_global(is_url_path_disabled, "is_url_path_disabled")
 
     from app.routes import api_bp, main_bp, miss_bp, stats_bp
 

@@ -16,24 +16,19 @@
   </nav>
   <h1>Puuttuvat lajit</h1>
   <form class="miss-form" method="get" action="{{ url_for('miss.miss_page') }}">
-    <div
-      data-taxon-select
-      data-autocomplete-url="{{ url_for('api.autocomplete_taxa') }}"
-      data-taxon-id-name="taxon"
-    >
+    <div data-taxon-select data-autocomplete-url="{{ url_for('api.autocomplete_taxa') }}">
       <h4><label for="miss-taxon-query">Hae lajiryhmä</label></h4>
       <div class="taxon-select__query-wrap">
         <input
           id="miss-taxon-query"
           class="taxon-select__query"
           type="text"
-          name="taxon_query"
           autocomplete="off"
           placeholder="Kirjoita taksonin nimi…"
           value="{{ taxon_label or '' }}"
         />
       </div>
-      <input type="hidden" name="taxon" value="{{ taxon_id }}" />
+      <input type="hidden" name="taxon_id" value="{{ taxon_id }}" />
       <ul class="taxon-select__suggestions" hidden></ul>
     </div>
     <div

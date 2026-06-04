@@ -6,6 +6,11 @@
     Tilastoja Suomen luontohavainnoista. Tällä sivustolla kokeillaan uusia tilastoja ja visualisointeja. Näytettävät tiedot ovat aitoa julkista <a href="https://laji.fi/">Lajitietokeskuksen havaintotietoa</a>, mutta sivuston kokeiluluonteesta johtuen ne voivat sisältää virheitä.
   </p>
   <ul>
-    <li><a href="{{ url_for('stats.observers_taxa_page', taxon_id='MX.37600') }}">Havainnoijien lajimäärät</a></li>
+    {% set observers_taxa_url = url_for('stats.observers_taxa_page', taxon_id='MX.37600') %}
+    {% if not is_url_path_disabled(observers_taxa_url) %}
+      <li><a href="{{ observers_taxa_url }}">Havainnoijien lajimäärät</a></li>
+    {% endif %}
+    {% set miss_url = url_for('miss.miss_page', taxon_id='MX.229577', lat=62.2449, lon=25.73, near=25, far=100, since_year=2000) %}
+    <li><a href="{{ miss_url }}">Puuttuvat lajit</a></li>
   </ul>
 {% endblock %}

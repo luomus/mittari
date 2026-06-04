@@ -3,12 +3,14 @@
  *
  *   <div data-taxon-select data-autocomplete-url="...">
  *     …
+ *     <input type="text" class="taxon-select__query" autocomplete="off" />
+ *       (omit `name` on the query field for GET forms so only the hidden id is submitted)
  *     <input type="hidden" name="taxon_id" value="" />
  *     <ul class="taxon-select__suggestions" hidden></ul>
  *   </div>
  *
- * Optional `data-taxon-id-name` on the root (default `taxon_id`) sets which hidden
- * input receives the selected taxon id — use e.g. `taxon` for GET query param names.
+ * Optional `data-taxon-id-name` on the root (default `taxon_id`) sets the hidden
+ * input’s `name` when it must differ from `taxon_id`.
  */
 (function () {
   var DEBOUNCE_MS = 300;

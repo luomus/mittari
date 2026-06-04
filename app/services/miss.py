@@ -48,7 +48,6 @@ def _coordinates_param(lat: float, lon: float, radius_km: float) -> str:
     return f"{lat_min}:{lat_max}:{lon_min}:{lon_max}:WGS84:0.5"
 
 
-
 def _fetch_species_counts(
     *,
     taxon_id: str,
