@@ -3,6 +3,7 @@ from flask import Blueprint, render_template, request
 from app.extensions import cache
 from app.services import miss as miss_service
 from app.services import observers_taxa
+from app.services.taxon_id import normalize_taxon_id
 
 bp = Blueprint("miss", __name__, url_prefix="/miss")
 
@@ -75,15 +76,15 @@ def _parse_miss_args() -> tuple[dict[str, object] | None, str | None]:
 
     near_km, far_km = _normalize_near_far_km(raw_near, raw_far)
 
-    taxon_id = (raw_taxon or "").strip()
-    if not taxon_id:
-        return None, "Taksoni puuttuu."
+    tid = normalize_taxon_id(raw_taxon or "")
+    if tid is None:
+        return None, "Taksonin tunniste ei kelpaa."
 
     return (
         {
             "lat": lat_r,
             "lon": lon_r,
-            "taxon_id": taxon_id,
+            "taxon_id": tid,
             "since_year": since_year,
             "near_km": near_km,
             "far_km": far_km,

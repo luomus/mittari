@@ -12,6 +12,7 @@ import os
 from urllib.parse import quote, urlencode
 
 from app.services.finbif_client import FinbifApiError, get_json
+from app.services.taxon_id import normalize_taxon_id
 
 _API_BASE = "https://api.laji.fi/warehouse/query/unit/aggregate"
 _TAXA_BASE = "https://api.laji.fi/taxa"
@@ -27,21 +28,14 @@ def _hidden_name_fold_set() -> set[str]:
     return {p.strip().casefold() for p in raw.split(";") if p.strip()}
 
 
-def _taxon_id_param(taxon_id: str) -> str:
-    """FinBIF accepts short qnames (e.g. MX.37600) or full taxon URIs."""
-    tid = taxon_id.strip()
-    if tid.startswith("http://") or tid.startswith("https://"):
-        return tid
-    return tid
-
 def get_taxon_display_label(taxon_id: str) -> str | None:
     """Resolve taxon id to ``scientific name (Finnish vernacular)`` via ``GET /taxa/{id}``.
 
     Returns ``None`` if the request fails or names are missing.
     ``Accept-Language: fi`` is set on the HTTP client so ``vernacularName`` is Finnish when available.
     """
-    tid = taxon_id.strip()
-    if not tid:
+    tid = normalize_taxon_id(taxon_id)
+    if tid is None:
         return None
     params = {
         "checklistVersion": "current",
@@ -107,7 +101,7 @@ def _fetch_aggregate(*, taxon_id: str, year: int | None) -> dict:
         "wild": "WILD,WILD_UNKNOWN",
         "recordQuality": "COMMUNITY_VERIFIED,NEUTRAL,EXPERT_VERIFIED",
         "higherTaxon": "false",
-        "taxonId": _taxon_id_param(taxon_id),
+        "taxonId": taxon_id,
     }
     if year is not None:
         params["time"] = str(year)
@@ -123,6 +117,14 @@ def get_observer_taxa_stats(taxon_id: str, year: int | None) -> dict[str, object
     Returns a dict with ``rows`` (list of ``name`` / ``species_count``),
     optional ``total`` from the API, and optional ``error`` (Finnish message).
     """
+    tid = normalize_taxon_id(taxon_id)
+    if tid is None:
+        return {
+            "rows": [],
+            "total": 0,
+            "error": "Taksonin tunniste ei kelpaa.",
+        }
+
     if year is not None and year < 1500:
         return {
             "rows": [],
@@ -131,7 +133,7 @@ def get_observer_taxa_stats(taxon_id: str, year: int | None) -> dict[str, object
         }
 
     try:
-        data = _fetch_aggregate(taxon_id=taxon_id, year=year)
+        data = _fetch_aggregate(taxon_id=tid, year=year)
     except FinbifApiError as e:
         return {"rows": [], "total": None, "error": str(e)}
 

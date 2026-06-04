@@ -7,19 +7,13 @@ import math
 from urllib.parse import urlencode
 
 from app.services.finbif_client import FinbifApiError, get_json
+from app.services.taxon_id import normalize_taxon_id
 
 _API_BASE = "https://api.laji.fi/warehouse/query/unit/aggregate"
 
 MISS_TABLE_MAX_ROWS = 250
 _AGGREGATE_PAGE_SIZE = 1000
 _AGGREGATE_MAX_PAGES = 10
-
-
-def _taxon_id_param(taxon_id: str) -> str:
-    tid = taxon_id.strip()
-    if tid.startswith("http://") or tid.startswith("https://"):
-        return tid
-    return tid
 
 
 def bounding_box(lat: float, lon: float, box_size_km: float) -> tuple[float, float, float, float]:
@@ -76,7 +70,7 @@ def _fetch_species_counts(
         "pessimisticDateRangeHandling": "false",
         "pageSize": str(_AGGREGATE_PAGE_SIZE),
         "cache": "true",
-        "taxonId": _taxon_id_param(taxon_id),
+        "taxonId": taxon_id,
         "useIdentificationAnnotations": "true",
         "includeSubTaxa": "true",
         "includeNonValidTaxa": "true",
@@ -141,6 +135,11 @@ def missing_species_between_rings(
     far_km: int,
 ) -> dict[str, object]:
     """Return ``rows`` (outer-only species), ``error`` (Finnish message if any)."""
+    tid = normalize_taxon_id(taxon_id)
+    if tid is None:
+        return {"rows": [], "error": "Taksonin tunniste ei kelpaa."}
+    taxon_id = tid
+
     current_year = datetime.datetime.now().year
     if since_year < 1900 or since_year > current_year:
         return {
