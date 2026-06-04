@@ -15,6 +15,24 @@
 (function () {
   var DEBOUNCE_MS = 300;
 
+  /** Ranks omitted from the suggestion list (high-level taxonomy only). */
+  var EXCLUDED_TAXON_RANKS = {
+    "MX.superdomain": true,
+    "MX.domain": true,
+    "MX.kingdom": true,
+    "MX.subkingdom": true,
+    "MX.infrakingdom": true,
+    "MX.superphylum": true,
+    "MX.phylum": true,
+    "MX.subphylum": true,
+    "MX.infraphylum": true,
+    "MX.superdivision": true,
+    "MX.division": true,
+    "MX.subdivision": true,
+    "MX.infradivision": true,
+    "MX.superclass": true,
+  };
+
   function labelFor(item) {
     var sci = item.scientificName || item.value || item.matchingName || "";
     var vern = item.vernacularName;
@@ -79,6 +97,7 @@
           results.forEach(function (item) {
             var id = item.id;
             if (!id) return;
+            if (EXCLUDED_TAXON_RANKS[item.taxonRank]) return;
             var li = document.createElement("li");
             li.className = "taxon-select__suggestion";
             var btn = document.createElement("button");

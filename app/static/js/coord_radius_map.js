@@ -45,9 +45,38 @@
     return parseFloat(String(el.value).replace(",", ".").trim());
   }
 
-  function parseIntInput(el) {
-    if (!el) return NaN;
-    return parseInt(String(el.value).trim(), 10);
+  function normalizeInnerKm(raw) {
+    var s = String(raw == null ? "" : raw).trim();
+    if (!s || !/^\d+$/.test(s)) return 10;
+    var n = parseInt(s, 10);
+    return Math.max(0, Math.min(50, n));
+  }
+
+  function normalizeOuterKm(raw) {
+    var s = String(raw == null ? "" : raw).trim();
+    if (!s || !/^\d+$/.test(s)) return 30;
+    var n = parseInt(s, 10);
+    return Math.max(0, Math.min(100, n));
+  }
+
+  function applyRadiusDefaults(nearInput, farInput) {
+    if (nearInput) nearInput.value = String(normalizeInnerKm(nearInput.value));
+    if (farInput) farInput.value = String(normalizeOuterKm(farInput.value));
+  }
+
+  /** Two decimals — canonical form for GET query (cache key). */
+  function roundLatLonForQueryUrl(x) {
+    if (typeof x !== "number" || isNaN(x)) return x;
+    return Math.round(x * 1e2) / 1e2;
+  }
+
+  function applyLatLonQueryParams(latInput, lonInput) {
+    if (!latInput || !lonInput) return;
+    var lat = parseFloatInput(latInput);
+    var lon = parseFloatInput(lonInput);
+    if (isNaN(lat) || isNaN(lon)) return;
+    latInput.value = String(roundLatLonForQueryUrl(lat));
+    lonInput.value = String(roundLatLonForQueryUrl(lon));
   }
 
   function querySel(root, attr) {
@@ -153,9 +182,10 @@
     }
 
     function readRadii() {
-      var near = parseIntInput(nearInput);
-      var far = parseIntInput(farInput);
-      return { near: near, far: far };
+      return {
+        near: normalizeInnerKm(nearInput.value),
+        far: normalizeOuterKm(farInput.value),
+      };
     }
 
     function redraw() {
@@ -167,22 +197,14 @@
       }
 
       var r = readRadii();
-      if (isNaN(r.near) || isNaN(r.far)) {
-        setHint("Anna säteet kokonaislukuina (km).");
-        return;
-      }
-      if (r.near < 1 || r.far < 1) {
-        setHint("Säteen täytyy olla vähintään 1 km.");
-        return;
-      }
       if (r.far <= r.near) {
         setHint("Ulomman säteen (km) pitää olla suurempi kuin sisemmän.");
       } else {
         setHint("");
       }
 
-      var latR = Math.round(lat * 1e4) / 1e4;
-      var lonR = Math.round(lon * 1e4) / 1e4;
+      var latR = roundLatLonForQueryUrl(lat);
+      var lonR = roundLatLonForQueryUrl(lon);
 
       var outerB = boundingBox(latR, lonR, r.far);
       var innerB = boundingBox(latR, lonR, r.near);
@@ -205,8 +227,10 @@
       var lat = parseFloatInput(latInput);
       var lon = parseFloatInput(lonInput);
       if (isNaN(lat) || isNaN(lon)) return;
-      var latR = Math.round(lat * 1e4) / 1e4;
-      var lonR = Math.round(lon * 1e4) / 1e4;
+      var latR = roundLatLonForQueryUrl(lat);
+      var lonR = roundLatLonForQueryUrl(lon);
+      latInput.value = String(latR);
+      lonInput.value = String(lonR);
       marker.setLatLng([latR, lonR]);
       redraw();
     }
@@ -218,8 +242,8 @@
 
     marker.on("dragend", function () {
       var ll = marker.getLatLng();
-      var latR = Math.round(ll.lat * 1e4) / 1e4;
-      var lonR = Math.round(ll.lng * 1e4) / 1e4;
+      var latR = roundLatLonForQueryUrl(ll.lat);
+      var lonR = roundLatLonForQueryUrl(ll.lng);
       latInput.value = String(latR);
       lonInput.value = String(lonR);
       redraw();
@@ -232,7 +256,28 @@
       farInput.addEventListener(ev, redraw);
     });
 
+    function onRadiusBlur() {
+      applyRadiusDefaults(nearInput, farInput);
+      redraw();
+    }
+    nearInput.addEventListener("blur", onRadiusBlur);
+    farInput.addEventListener("blur", onRadiusBlur);
+
+    var form = nearInput.closest("form");
+    if (form) {
+      form.addEventListener(
+        "submit",
+        function () {
+          applyLatLonQueryParams(latInput, lonInput);
+          applyRadiusDefaults(nearInput, farInput);
+        },
+        true
+      );
+    }
+
     map.whenReady(function () {
+      applyLatLonQueryParams(latInput, lonInput);
+      applyRadiusDefaults(nearInput, farInput);
       redraw();
       try {
         var b = outerRect.getBounds();

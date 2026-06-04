@@ -11,6 +11,8 @@ from app.services.finbif_client import FinbifApiError, get_json
 _API_BASE = "https://api.laji.fi/warehouse/query/unit/aggregate"
 
 MISS_TABLE_MAX_ROWS = 250
+_AGGREGATE_PAGE_SIZE = 1000
+_AGGREGATE_MAX_PAGES = 10
 
 
 def _taxon_id_param(taxon_id: str) -> str:
@@ -57,7 +59,7 @@ def _fetch_species_counts(
     since_year: int,
     current_year: int,
 ) -> dict[str, dict[str, object]]:
-    params = {
+    base_params = {
         "aggregateBy": ",".join(
             [
                 "unit.linkings.taxon.id",
@@ -72,8 +74,7 @@ def _fetch_species_counts(
         "atlasCounts": "false",
         "excludeNulls": "true",
         "pessimisticDateRangeHandling": "false",
-        "pageSize": "1000",
-        "page": "1",
+        "pageSize": str(_AGGREGATE_PAGE_SIZE),
         "cache": "true",
         "taxonId": _taxon_id_param(taxon_id),
         "useIdentificationAnnotations": "true",
@@ -86,38 +87,47 @@ def _fetch_species_counts(
         "coordinates": _coordinates_param(lat, lon, radius_km),
         "qualityIssues": "NO_ISSUES",
     }
-    url = f"{_API_BASE}?{urlencode(params)}"
-    data = get_json(url)
-    results = data.get("results", [])
-    if not isinstance(results, list):
-        return {}
 
     out: dict[str, dict[str, object]] = {}
-    for row in results:
-        if not isinstance(row, dict):
-            continue
-        agg = row.get("aggregateBy")
-        if not isinstance(agg, dict):
-            continue
-        tid = agg.get("unit.linkings.taxon.id")
-        if tid is None:
-            continue
-        tid_s = str(tid)
-        count_raw = row.get("count", 0)
-        if isinstance(count_raw, (int, float)):
-            count = int(count_raw)
-        else:
-            try:
-                count = int(str(count_raw))
-            except ValueError:
-                count = 0
-        fi = agg.get("unit.linkings.taxon.nameFinnish")
-        sci = agg.get("unit.linkings.taxon.scientificName")
-        out[tid_s] = {
-            "count": count,
-            "fi": str(fi) if fi is not None else "",
-            "sci": str(sci) if sci is not None else "",
-        }
+    page = 1
+    while page <= _AGGREGATE_MAX_PAGES:
+        params = {**base_params, "page": str(page)}
+        url = f"{_API_BASE}?{urlencode(params)}"
+        data = get_json(url)
+        results = data.get("results", [])
+        if not isinstance(results, list):
+            break
+
+        for row in results:
+            if not isinstance(row, dict):
+                continue
+            agg = row.get("aggregateBy")
+            if not isinstance(agg, dict):
+                continue
+            tid = agg.get("unit.linkings.taxon.id")
+            if tid is None:
+                continue
+            tid_s = str(tid)
+            count_raw = row.get("count", 0)
+            if isinstance(count_raw, (int, float)):
+                count = int(count_raw)
+            else:
+                try:
+                    count = int(str(count_raw))
+                except ValueError:
+                    count = 0
+            fi = agg.get("unit.linkings.taxon.nameFinnish")
+            sci = agg.get("unit.linkings.taxon.scientificName")
+            out[tid_s] = {
+                "count": count,
+                "fi": str(fi) if fi is not None else "",
+                "sci": str(sci) if sci is not None else "",
+            }
+
+        if len(results) < _AGGREGATE_PAGE_SIZE or page >= _AGGREGATE_MAX_PAGES:
+            break
+        page += 1
+
     return out
 
 
@@ -137,10 +147,10 @@ def missing_species_between_rings(
             "rows": [],
             "error": "Vuosiluku tulee olla välillä 1900 ja kuluva vuosi.",
         }
-    if near_km < 1 or far_km < 1:
+    if near_km < 0 or far_km < 0:
         return {
             "rows": [],
-            "error": "Säteen täytyy olla vähintään 1 km.",
+            "error": "Säde ei voi olla negatiivinen.",
         }
     if far_km <= near_km:
         return {

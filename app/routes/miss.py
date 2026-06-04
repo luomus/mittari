@@ -15,6 +15,37 @@ _DEFAULT_SINCE_YEAR = 2001
 _DEFAULT_NEAR = 25
 _DEFAULT_FAR = 100
 
+_INNER_KM_MIN = 0
+_INNER_KM_MAX = 50
+_OUTER_KM_MIN = 0
+_OUTER_KM_MAX = 100
+_NONINT_DEFAULT_NEAR = 10
+_NONINT_DEFAULT_FAR = 30
+
+
+def _normalize_near_far_km(raw_near: str, raw_far: str) -> tuple[int, int]:
+    """Integers in range; non-integer strings → 10 km / 30 km."""
+
+    def strict_uint(s: str) -> int | None:
+        t = s.strip()
+        if not t or not t.isdigit():
+            return None
+        return int(t)
+
+    n = strict_uint(raw_near)
+    if n is None:
+        near_km = _NONINT_DEFAULT_NEAR
+    else:
+        near_km = max(_INNER_KM_MIN, min(_INNER_KM_MAX, n))
+
+    f = strict_uint(raw_far)
+    if f is None:
+        far_km = _NONINT_DEFAULT_FAR
+    else:
+        far_km = max(_OUTER_KM_MIN, min(_OUTER_KM_MAX, f))
+
+    return near_km, far_km
+
 
 def _parse_miss_args() -> tuple[dict[str, object] | None, str | None]:
     """Return (params dict, error Finnish) — error means skip FinBIF."""
@@ -34,19 +65,15 @@ def _parse_miss_args() -> tuple[dict[str, object] | None, str | None]:
     if lat < 0 or lon < 0:
         return None, "Leveys- ja pituusasteen oletetaan olevan positiivisia (Suomi)."
 
-    lat_r = round(lat, 4)
-    lon_r = round(lon, 4)
+    lat_r = round(lat, 2)
+    lon_r = round(lon, 2)
 
     try:
         since_year = int(raw_since)
     except ValueError:
         return None, "since_year ei ole kelvollinen kokonaisluku."
 
-    try:
-        near_km = int(raw_near)
-        far_km = int(raw_far)
-    except ValueError:
-        return None, "near tai far ei ole kelvollinen kokonaisluku."
+    near_km, far_km = _normalize_near_far_km(raw_near, raw_far)
 
     taxon_id = (raw_taxon or "").strip()
     if not taxon_id:

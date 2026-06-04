@@ -17,7 +17,7 @@
   <h1>Puuttuvat lajit</h1>
   <form class="miss-form" method="get" action="{{ url_for('miss.miss_page') }}">
     <div data-taxon-select data-autocomplete-url="{{ url_for('api.autocomplete_taxa') }}">
-      <h4><label for="miss-taxon-query">Hae lajiryhmä</label></h4>
+      <h4><label for="miss-taxon-query">Hae lajiryhmä (luokka tai alempi)</label></h4>
       <div class="taxon-select__query-wrap">
         <input
           id="miss-taxon-query"
@@ -55,11 +55,11 @@
         </div>
         <div>
           <label for="miss-near">Sisempi säde (km)</label>
-          <input id="miss-near" type="number" name="near" min="1" step="1" value="{{ near_km }}" />
+          <input id="miss-near" type="number" name="near" min="0" max="50" step="1" value="{{ near_km }}" />
         </div>
         <div>
           <label for="miss-far">Ulompi säde (km)</label>
-          <input id="miss-far" type="number" name="far" min="1" step="1" value="{{ far_km }}" />
+          <input id="miss-far" type="number" name="far" min="0" max="100" step="1" value="{{ far_km }}" />
         </div>
       </div>
     </div>
@@ -106,7 +106,7 @@
           <tr>
             <td>{{ loop.index }}</td>
             <td>
-              <a href="https://laji.fi/observation/list?target={{ row.taxon_id }}&amp;time={{ since_year }}-01-01%2F&amp;coordinates={{ laji_obs_coordinates }}">{{ row.fi or row.taxon_id }}</a>
+              <a href="https://laji.fi/observation/map?target={{ row.taxon_id }}&amp;time={{ since_year }}-01-01%2F&amp;coordinates={{ laji_obs_coordinates }}">{{ row.fi or "ei suomenkielistä nimeä" }}</a>
             </td>
             <td><em>{{ row.sci }}</em></td>
             <td>{{ row.count }}</td>

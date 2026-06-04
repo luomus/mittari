@@ -3,9 +3,18 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import urllib.error
 import urllib.request
+
+logger = logging.getLogger(__name__)
+if not logger.handlers:
+    _handler = logging.StreamHandler()
+    _handler.setLevel(logging.INFO)
+    logger.addHandler(_handler)
+    logger.setLevel(logging.INFO)
+    logger.propagate = False
 
 
 class FinbifApiError(Exception):
@@ -21,6 +30,8 @@ def get_json(url: str, *, timeout: float = 60.0) -> dict:
     token = (os.environ.get("LAJI_API_ACCESS_TOKEN") or "").strip()
     if not token:
         raise FinbifApiError("Access token is missing from environment.")
+
+    logger.info("api.laji.fi request: %s", url)
 
     req = urllib.request.Request(
         url,
